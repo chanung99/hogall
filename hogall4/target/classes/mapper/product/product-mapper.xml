@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="product">
+  	
+  	<select id="sportsList" parameterType="map" resultType="com.ho.gall.model.vo.Product">
+  		<!-- select to_char(closingdate,'YYYY-MM-DD')as chardate , p.*,(select categoryname from category where p.productcategory=categoryid) as categoryname,(select categoryimage from category where p.productcategory=categoryid)as productimage from product p where p.productcategory = #{category} order by enrollproduct desc -->
+  		<!-- select p.*,to_char(closingdate,'YYYY-MM-DD')as closingDatee,(select categoryname from category where p.productcategory=categoryid) as categoryname,(select categoryimage from category where p.productcategory=categoryid)as categoryimage,(select DISTINCT rethumbnail from productimage where p.productid=productid) as rethumbnail from product p where p.productcategory = #{category} and availability = 'Y' order by enrollproduct desc -->
+  		<![CDATA[select p.*,date_format(closingdate,'%Y-%m-%d')as closingDatee,(select categoryname from category where p.productcategory=categoryid) as categoryname,(select categoryimage from category where p.productcategory=categoryid)as categoryimage,(select DISTINCT rethumbnail from productimage where p.productid=productid) as rethumbnail from product p where p.productcategory = #{category} and availability = 'Y' AND NOW() < DATE_FORMAT(closingdate,'%Y-%m-%d') order by enrollproduct desc]]>
+  	</select>
+  	
+  	<update id="views" parameterType="int">
+  		update product set views = views + 1 where productId = #{productId}
+  	</update>
+  	
+  	<select id="productCount" resultType="_int">
+  		select count(*) from product where productcategory = #{category} and availability = 'Y' 
+  	</select>
+  	
+  	<insert id="insertProduct" parameterType	="com.ho.gall.model.vo.ProductVo">
+  	<!-- insert into Product values(NextVal('SEQ_PRODUCT'),#{productCategory},#{productName},#{buyNowPrice},#{buyNowWhether},#{priceStart},#{productOwner},sysdate(),#{productEnrollType},'Y',#{productContent},#{closingDate},#{closingTime},#{commition},#{buyNowPrice},#{unit},'0') -->
+  		
+  		INSERT INTO product (PRODUCTCATEGORY,PRODUCTNAME,BUYNOWPRICE,BUYNOWWHETHER,PRICESTART,PRODUCTOWNER,ENROLLPRODUCT,PRODUCTENROLLTYPE,AVAILABILITY,PRODUCTCONTENT,CLOSINGDATE,CLOSINGTIME,COMMITION,PRICE,UNIT,VIEWS) VALUES (#{productCategory},#{productName},#{buyNowPrice},#{buyNowWhether},#{priceStart},#{productOwner},SYSDATE(),#{productEnrollType},'Y',#{productContent},#{closingDate},#{closingTime},#{commition},#{buyNowPrice},#{unit},0)
+  		<selectKey keyProperty="productId" resultType="_int" order="AFTER">
+  			<!-- select SEQ_PRODUCT.currval from dual -->
+  			select max(productid) from product
+  		</selectKey>
+  	
+  	</insert>
+  	
+  	<insert id="insertProductImage" parameterType="com.ho.gall.model.vo.ProductImage"> 		
+  		<!-- insert into ProductImage values(NextVal('SEQ_IMAGEID'),#{oriFileName},#{reFileName},#{productId},#{orithumbnail},#{rethumbnail}) -->
+  		insert into productimage (orifilename,refilename,PRODUCTID,orithumbnail,rethumbnail) values (#{oriFileName},#{reFileName},#{productId},#{orithumbnail},#{rethumbnail})
+  		<!-- #{productId}는 위에 selectKey -->
+  	</insert>
+  	
+  	<select id="readProduct" parameterType="int" resultType="com.ho.gall.model.vo.ReadProduct">
+		<!-- select * from product where productId=#{productId} -->
+		<!-- select p.*,to_char(closingdate,'YYYY-MM-DD')as closingDatee,to_char(enrollproduct,'YYYY-MM-DD')as enrolldate from product p where productId=#{productId} -->
+		<!-- select p.*,date_format(closingdate,'YYYY-MM-DD')as closingDatee,date_format(enrollproduct,'YYYY-MM-DD')as enrolldate from product p where productId=#{productId} -->
+		select p.*,date_format(closingdate,'%Y-%m-%d')as closingDatee,date_format(enrollproduct,'%Y-%m-%d')as enrolldate from product p where productId=#{productId}
+		
+  	</select>
+  	
+  	<select id="pCount" resultType="int">
+  		select count(*) from participating where productId=#{productId}
+  	</select>
+  	
+  	<select id="productImage" parameterType="int" resultType="com.ho.gall.model.vo.ProductImage">
+  		select * from productImage where productId=#{productId}
+  	</select>
+  	
+  	<insert id="winningBid" parameterType="com.ho.gall.model.vo.WinningBid" >
+  		<!-- insert into winningbid values(NextVal('SEQ_WBLIST'),#{memberId},#{productId},#{name},#{price},#{image},#{seller},sysdate()) -->
+  		INSERT INTO winningbid (MEMBERID,PRODUCTID,NAME,PRICE,IMAGE,SELLER,WBDATE) VALUES (#{memberId},#{productId},#{name},#{price},#{image},#{seller},SYSDATE())
+  	</insert>
+  	
+  	<update id="productOff" parameterType="int">
+  		update product set availability = 'N' where productId = #{productId}
+  	</update>
+  	 
+  	 <insert id="productBid" parameterType="com.ho.gall.model.vo.Participating">
+  	 	INSERT INTO participating (MEMBERID,PRODUCTID,ENROLLDATE,BIDPRICE,CURPRICE) VALUES (#{memberId},#{productId},SYSDATE(),#{bidPrice},${curPrice})
+  	 </insert>
+  	 
+  	 <update id="priceInsert" parameterType="map">
+  	 	update product set price =#{maxPrice} where productId = #{productId}
+  	 </update>
+  	 
+  	 <select id="maxPrice" resultType="com.ho.gall.model.vo.Participating">
+  	 	select * from participating where curprice =(select max(curprice) from participating)
+  	 </select>
+  	 
+  	 <select id="ppap" parameterType="_int" resultType="com.ho.gall.model.vo.Participating">
+  	 	<!-- select * from participating where productId=#{productId} order by curprice desc -->
+  	 	select parNo,memberId,productId,date_format(enrollDate,'%Y-%m-%d')as enrollDatee,bidprice,curprice from participating where productId=#{productId} order by curprice desc
+  	 </select>
+  	 
+  	 <select id="popularProduct" parameterType="map" resultType="com.ho.gall.model.vo.Product">
+		<!-- <![CDATA[select p.*,date_format(closingdate,'YYYY-MM-DD')as closingDatee,(select categoryname from category where p.productcategory=categoryid) as categoryname,(select categoryimage from category where p.productcategory=categoryid)as categoryimage,(select DISTINCT rethumbnail from productimage where p.productid=productid) as rethumbnail from (select * from product order by views desc) p where availability ='Y' ]]> -->
+		<![CDATA[select p.*,date_format(closingdate,'%Y-%m-%d')as closingDatee,(select categoryname from category where p.productcategory=categoryid) as categoryname,(select categoryimage from category where p.productcategory=categoryid)as categoryimage,(select DISTINCT rethumbnail from productimage where p.productid=productid) as rethumbnail from (select * from product order by views desc) p where availability ='Y' AND NOW() < DATE_FORMAT(closingdate,'%Y-%m-%d') order by views desc LIMIT 16]]>
+  	 	
+  	 </select>
+  	 
+  	<select id="itemCount" resultType="int">
+  		select count(*) from product
+  	</select>
+  	
+  	<select id="searchProduct" resultType="map">	
+  		select productid,productname from product where PRODUCTNAME LIKE '%'||#{keyword}||'%'
+  		
+  	</select>
+  	
+  	<insert id="commentInsert" parameterType="com.ho.gall.model.vo.ProductComment">
+  		
+  		INSERT INTO productcomment(productid,memberid,commentcontent,groupid,commentnoref,depth,commentorder,enrollcomment) VALUES (#{productId},#{memberId},#{commentContent},1,0,0,1,SYSDATE())
+  		
+  	</insert>
+  	
+  	<select id="comments" parameterType="_int" resultType="com.ho.gall.model.vo.ProductComment">
+  		select c.*,date_format(enrollcomment,'YYYY-MM-DD')as enroll from productcomment c where productid = #{productId} order by  groupId asc, enrollcomment asc 
+  	</select>
+  	
+  	<select id="commentCount" parameterType="_int" resultType="_int">
+  		select count(*) from productcomment where productId = #{productId}
+  	</select>
+  	
+	<delete id="cmtDel" parameterType="_int">
+		
+		delete from productcomment where commentno = #{commentNo}
+	</delete>
+	
+	<insert id="cmtAnswer" parameterType="com.ho.gall.model.vo.ProductComment">
+		<!-- insert into productcomment values (NextVal('SEQ_COMMENT'),#{productId},#{memberId},#{commentContent},#{groupId},NextVal('SEQ_COMMENT'),'1','2',sysdate()) -->
+		INSERT INTO productcomment(productid,memberid,commentcontent,groupid,commentnoref,depth,commentorder,enrollcomment) VALUES (#{productId},#{memberId},#{commentContent},#{groupId},0,1,2,SYSDATE())
+		
+	</insert>
+	
+	<select id="cmtAnswerList" parameterType="com.ho.gall.model.vo.ProductComment" resultType="com.ho.gall.model.vo.ProductComment">
+		select c.*,date_format(enrollcomment,'YYYY-MM-DD')as enroll from productcomment c where productid = #{productId} and depth = '1' order by enrollcomment
+	</select>
+	
+	<select id="partic" parameterType="string" resultType="com.ho.gall.model.vo.Participating">
+		SELECT * FROM participating WHERE memberid = #{id}
+	</select>
+</mapper>
